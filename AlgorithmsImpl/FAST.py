@@ -3,12 +3,12 @@ from .PrimMST import Graph
 import itertools
 
 
-def generateGraph(features):
+def generateGraph(X,features):
     graph = Graph(len(features))
     pairs_of_features = list(itertools.combinations([i for i in range(len(features))], 2))
     for pair in pairs_of_features:
         fi, fj = pair
-        f_correlation = su_calculation(fi, fj)
+        f_correlation = su_calculation(X[fi], X[fj])
         graph.addEdge(fi, fj, f_correlation)
     return graph
 
@@ -51,30 +51,34 @@ def createTrees(nodes, edges):
 
 def FAST(X, y, t_relevance_threshold=0.0):
     S = set()
+    _X=X.to_numpy()
+    _y=y.to_numpy()
     # ==== Part 1: Irrelevant Feature Removal ====
     features = list(X.columns)
-    for f in features:
-        t_relevance = su_calculation(X[f].value, y.value)
+    for f in range(len(features)):
+        t_relevance = su_calculation(_X[f], _y)
         if t_relevance > t_relevance_threshold:
             S.add(f)
+        else:
+            print(f'{f}:{t_relevance}')
 
     # ==== Part 2: Minimum Spanning Tree Construction ====
-    graph = generateGraph(features)
+    graph = generateGraph(_X,features)
     forest = graph.PrimMST()
 
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
     for edge in forest.copy():
         i, j = edge
-        su_fifj = su_calculation(X[features[i]].value, X[features[j]].value)
-        su_fic = su_calculation(X[features[i]].value, y.value)
-        su_fjc = su_calculation(X[features[j]].value, y.value)
+        su_fifj = su_calculation(_X[i], _X[j])
+        su_fic = su_calculation(_X[i], _y)
+        su_fjc = su_calculation(_X[j], _y)
         if su_fifj < su_fic and su_fifj < su_fjc:
             forest.remove(edge)
 
     S.clear()
     trees = createTrees(features, forest)
     for tree in trees:
-        su_list = [(f, su_calculation(X[f].value, y.value)) for f in tree]
+        su_list = [(f, su_calculation(_X[f], _y)) for f in tree]
         su_list.sort(key=lambda x: x[1], reverse=True)
         fr = su_list[0]
         S.add(fr)
