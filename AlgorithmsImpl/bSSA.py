@@ -20,13 +20,11 @@ def generateUpdateLeaderFunction(Ymax, Ymin):
     def updateLeader(leaderLocation, a1):
         a2, a3 = random(), random()
         if a3 >= 0.5:
-            pass
+            return leaderLocation + a1 * (Ymax * a2 + Ymin)
         else:
-            pass
+            return leaderLocation - a1 * (Ymax * a2 + Ymin)
 
-        pass
-
-    pass
+    return updateLeader
 
 
 def calculateFitness(salp, X, y):
@@ -42,9 +40,8 @@ def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=70):
     X = dataTransformation(X)
 
     # B. BINARY SALP SWARM ALGORITHM
-    # salps = [[randint(0, 1) for _ in range(X.shape[1])] for _ in range(population_size)]  # creates initial population
     salps = [np.where(default_rng(42).random(X.shape[1]) > binarization_threshold, 1, 0) for _ in
-             range(population_size)]
+             range(population_size)]  # creates initial population
     Ymax = np.ones(X.shape[1])
     Ymin = np.zeros(X.shape[1])
     updateLeader = generateUpdateLeaderFunction(Ymax, Ymin)
@@ -53,9 +50,5 @@ def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=70):
         salps.sort(key=lambda salp: calculateFitness(salp, X, y), reverse=True)
         a1 = 2 * (math.e ** (-(4 * currIter / maxIter) ** 2))  # Eq.3
         for j in range(len(salps)):
-            if j == 0:
-                newLocation = updateLeader(salps[j], a1)  # Modify position of leader salp using Eq. 2
-                salps[j] = np.where(newLocation>binarization_threshold,1,0)  # convert them into binary using threshold δ
-            else:
-                newLocation = updateFollower(salps[j], salps[j - 1])
-                salps[j] = np.where(newLocation>binarization_threshold,1,0)  # convert them into binary using threshold δ
+            newLocation = updateLeader(salps[j], a1) if j == 0 else updateFollower(salps[j], salps[j - 1])
+            salps[j] = np.where(newLocation > binarization_threshold, 1, 0)  # convert them into binary using threshold δ
