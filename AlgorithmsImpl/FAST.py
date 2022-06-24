@@ -85,7 +85,7 @@ def FAST(X, y, t_relevance_threshold=None):
 
     # # ==== Part 1: Irrelevant Feature Removal ====
     # features = list(X.columns)
-    features = range(len(X))
+    features = [i for i in range(X.shape[1])]
     for f in features:
         t_relevance = su_calculation(X[f], y)
         if t_relevance > t_relevance_threshold:
