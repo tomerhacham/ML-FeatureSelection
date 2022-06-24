@@ -66,25 +66,28 @@ def createTrees(edges):
 def FAST(X, y, t_relevance_threshold=None):
     '''
     A Fast Clustering Based Feature Subset Selection
-    :param X: dataframe with features values
-    :param y: dataframe/ pandas series with target values
+    X : {array-like, sparse matrix} of shape (n_samples, n_features)
+        The data matrix.
+    y : array-like of shape (n_samples,)
+        The target vector
     :param t_relevance_threshold: float or None, minimum t-relevant threshold for irrelevant feature removal
     :return: vector represent for each feature if it was selected or not
     '''
     S = set()
-    _X = X.to_numpy()
-    _y = y.to_numpy()
+    #_X = X.to_numpy()
+    #_y = y.to_numpy()
     if t_relevance_threshold is None:
         rf = ReliefF()
-        rf.fit(_X, _y)
+        rf.fit(X, y)
         index = math.floor(math.sqrt(len(X))*math.log(len(X)))
         feature = rf.top_features[index]
-        t_relevance_threshold=su_calculation(_X[feature],_y)
+        t_relevance_threshold=su_calculation(X[feature],y)
 
     # # ==== Part 1: Irrelevant Feature Removal ====
-    features = list(X.columns)
-    for f in range(len(features)):
-        t_relevance = su_calculation(_X[f], _y)
+    # features = list(X.columns)
+    features = range(len(X))
+    for f in features:
+        t_relevance = su_calculation(X[f], y)
         if t_relevance > t_relevance_threshold:
             S.add(f)
         else:
@@ -92,26 +95,26 @@ def FAST(X, y, t_relevance_threshold=None):
 
     # ==== Part 2: Minimum Spanning Tree Construction ====
     nodes_map = [node for node in S]
-    graph = generateGraph(_X, S, nodes_map)
+    graph = generateGraph(X, S, nodes_map)
     _forest = graph.primMST()
     forest = [(nodes_map[edge[0]], nodes_map[edge[1]]) for edge in _forest]
 
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
     for edge in forest.copy():
         i, j = edge
-        su_fifj = su_calculation(_X[i], _X[j])
-        su_fic = su_calculation(_X[i], _y)
-        su_fjc = su_calculation(_X[j], _y)
+        su_fifj = su_calculation(X[i], X[j])
+        su_fic = su_calculation(X[i], y)
+        su_fjc = su_calculation(X[j], y)
         if su_fifj < su_fic and su_fifj < su_fjc:
             forest.remove(edge)
 
     S.clear()
     trees = createTrees(forest)
     for tree in trees:
-        su_list = [(f, su_calculation(_X[f], _y)) for f in tree]
+        su_list = [(f, su_calculation(X[f], y)) for f in tree]
         su_list.sort(key=lambda x: x[1], reverse=True)
         fr = su_list[0][0]
-        S.add(features[fr])
+        S.add(fr)
     vector = [1 if f in S else 0 for f in features]
     return vector
     return S

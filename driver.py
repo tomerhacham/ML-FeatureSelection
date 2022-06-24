@@ -5,4 +5,4 @@ from ReliefF import ReliefF
 
 dataset = pd.read_csv('datasets/X_y_train.csv')
 X, y = dataset.loc[:, dataset.columns != 'y'], dataset['y']
-features = FAST(X,y)
+features = FAST(X.to_numpy(),y.to_numpy())
