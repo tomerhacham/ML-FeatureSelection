@@ -30,11 +30,6 @@ def generateUpdateLeaderFunction(Ymax, Ymin):
 def calculateFitness(salp, X, y):
     pass
 
-
-def updateFollower(param, param1):
-    pass
-
-
 def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=70):
     # A. FEATURE TRANSFORMATIO
     X = dataTransformation(X)
@@ -50,5 +45,5 @@ def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=70):
         salps.sort(key=lambda salp: calculateFitness(salp, X, y), reverse=True)
         a1 = 2 * (math.e ** (-(4 * currIter / maxIter) ** 2))  # Eq.3
         for j in range(len(salps)):
-            newLocation = updateLeader(salps[j], a1) if j == 0 else updateFollower(salps[j], salps[j - 1])
+            newLocation = updateLeader(salps[j], a1) if j == 0 else (salps[j] + salps[j - 1])/2
             salps[j] = np.where(newLocation > binarization_threshold, 1, 0)  # convert them into binary using threshold δ
