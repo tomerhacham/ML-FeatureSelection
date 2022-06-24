@@ -1,15 +1,24 @@
 from skfeature.utility.mutual_information import su_calculation
 from .PrimMST import Graph
 import itertools
+from joblib import Parallel, delayed
 
 
-def generateGraph(X,features):
-    graph = Graph(len(features))
-    pairs_of_features = list(itertools.combinations([i for i in range(len(features))], 2))
-    for pair in pairs_of_features:
+
+def generateGraph(X,S):
+    def generateEdge(pair,graph):
         fi, fj = pair
         f_correlation = su_calculation(X[fi], X[fj])
         graph.addEdge(fi, fj, f_correlation)
+        return
+    graph = Graph(len(S))
+    pairs_of_features = list(itertools.combinations([i for i in range(len(S))], 2))
+    Parallel(require='sharedmem')(delayed(generateEdge)(pair,graph) for pair in pairs_of_features)
+
+    # for pair in pairs_of_features:
+    #     fi, fj = pair
+    #     f_correlation = su_calculation(X[fi], X[fj])
+    #     graph.addEdge(fi, fj, f_correlation)
     return graph
 
 
@@ -49,7 +58,7 @@ def createTrees(nodes, edges):
     return cc
 
 
-def FAST(X, y, t_relevance_threshold=0.0):
+def FAST(X, y, t_relevance_threshold=0.06):
     S = set()
     _X=X.to_numpy()
     _y=y.to_numpy()
@@ -63,7 +72,7 @@ def FAST(X, y, t_relevance_threshold=0.0):
             print(f'{f}:{t_relevance}')
 
     # ==== Part 2: Minimum Spanning Tree Construction ====
-    graph = generateGraph(_X,features)
+    graph = generateGraph(_X,S)
     forest = graph.PrimMST()
 
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
