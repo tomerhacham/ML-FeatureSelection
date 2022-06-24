@@ -88,7 +88,7 @@ def FAST(X, y, t_relevance_threshold=None):
     # ==== Part 2: Minimum Spanning Tree Construction ====
     nodes_map = [node for node in S]
     graph = generateGraph(_X, S, nodes_map)
-    _forest = graph.PrimMST()
+    _forest = graph.primMST()
     forest = [(nodes_map[edge[0]], nodes_map[edge[1]]) for edge in _forest]
 
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
@@ -107,4 +107,6 @@ def FAST(X, y, t_relevance_threshold=None):
         su_list.sort(key=lambda x: x[1], reverse=True)
         fr = su_list[0][0]
         S.add(features[fr])
+    vector = [1 if f in S else 0 for f in features]
+    return vector
     return S
