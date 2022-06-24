@@ -8,11 +8,11 @@ def generateGraph(X, S, nodes_map):
     def calculateWeight(pair):
         fi, fj = pair
         fi_tag, fj_tag = nodes_map[fi], nodes_map[fj]
-        f_correlation = su_calculation(X[fi], X[fj])
-        return (fi_tag, fj_tag, f_correlation)
+        f_correlation = su_calculation(X[fi_tag], X[fj_tag])
+        return (fi, fj, f_correlation)
 
     graph = Graph(len(S))
-    pairs_of_features = list(itertools.combinations([i for i in len(S)], 2))
+    pairs_of_features = list(itertools.combinations([i for i in range(len(S))], 2))
     print(f'pairs: {len(pairs_of_features)}')
     edges = Parallel(n_jobs=-1,
                      verbose=10)(delayed(calculateWeight)(pair) for pair in pairs_of_features)
@@ -62,23 +62,24 @@ def createTrees(edges):
 
 
 def FAST(X, y, t_relevance_threshold=0.07):
-    S = set([11,12,13,14,15])
+    S = set()
     _X = X.to_numpy()
     _y = y.to_numpy()
 
     # # ==== Part 1: Irrelevant Feature Removal ====
     features = list(X.columns)
-    # for f in range(len(features)):
-    #     t_relevance = su_calculation(_X[f], _y)
-    #     if t_relevance > t_relevance_threshold:
-    #         S.add(f)
-    #     else:
-    #         print(f'{f}:{t_relevance}')
+    for f in range(len(features)):
+        t_relevance = su_calculation(_X[f], _y)
+        if t_relevance > t_relevance_threshold:
+            S.add(f)
+        else:
+            print(f'{f}:{t_relevance}')
 
     # ==== Part 2: Minimum Spanning Tree Construction ====
     nodes_map = [node for node in S]
     graph = generateGraph(_X, S, nodes_map)
-    forest = graph.PrimMST()
+    _forest = graph.PrimMST()
+    forest = [(nodes_map[edge[0]], nodes_map[edge[1]]) for edge in _forest]
 
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
     for edge in forest.copy():
