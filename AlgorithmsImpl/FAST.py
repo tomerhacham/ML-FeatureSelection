@@ -1,3 +1,5 @@
+import math
+from ReliefF import ReliefF
 from skfeature.utility.mutual_information import su_calculation
 from .PrimMST import Graph
 import itertools
@@ -28,6 +30,7 @@ def createTrees(edges):
     def getNeighbors(v):
         neighbors = set([edge[1] for edge in filter(lambda edge: edge[0] == v, edges)])
         return neighbors
+
     def DFS(temp, v, visited):
 
         # Mark the current vertex as visited
@@ -49,22 +52,29 @@ def createTrees(edges):
     def connectedComponents(nodes):
         visited = {}
         for v in nodes:
-            visited[v]=False
+            visited[v] = False
         cc = []
         for v in nodes:
             if not visited[v]:
                 temp = []
                 cc.append(DFS(temp, v, visited))
         return cc
+
     nodes = set([edge[0] for edge in edges]).union(set([edge[1] for edge in edges]))
     cc = connectedComponents(nodes)
     return cc
 
 
-def FAST(X, y, t_relevance_threshold=0.07):
+def FAST(X, y, t_relevance_threshold=None):
     S = set()
     _X = X.to_numpy()
     _y = y.to_numpy()
+    if t_relevance_threshold is None:
+        rf = ReliefF()
+        rf.fit(_X, _y)
+        index = math.floor(math.sqrt(len(X))*math.log(len(X)))
+        feature = rf.top_features[index]
+        t_relevance_threshold=su_calculation(_X[feature],_y)
 
     # # ==== Part 1: Irrelevant Feature Removal ====
     features = list(X.columns)
