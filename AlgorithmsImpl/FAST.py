@@ -4,29 +4,30 @@ import itertools
 from joblib import Parallel, delayed
 
 
-
-def generateGraph(X,S):
-    def generateEdge(pair,graph):
+def generateGraph(X, S, nodes_map):
+    def calculateWeight(pair):
         fi, fj = pair
+        fi_tag, fj_tag = nodes_map[fi], nodes_map[fj]
         f_correlation = su_calculation(X[fi], X[fj])
-        graph.addEdge(fi, fj, f_correlation)
-        return
-    graph = Graph(len(S))
-    pairs_of_features = list(itertools.combinations([i for i in range(len(S))], 2))
-    Parallel(require='sharedmem')(delayed(generateEdge)(pair,graph) for pair in pairs_of_features)
+        return (fi_tag, fj_tag, f_correlation)
 
-    # for pair in pairs_of_features:
-    #     fi, fj = pair
-    #     f_correlation = su_calculation(X[fi], X[fj])
-    #     graph.addEdge(fi, fj, f_correlation)
+    graph = Graph(len(S))
+    pairs_of_features = list(itertools.combinations([i for i in len(S)], 2))
+    print(f'pairs: {len(pairs_of_features)}')
+    edges = Parallel(n_jobs=-1,
+                     verbose=10)(delayed(calculateWeight)(pair) for pair in pairs_of_features)
+
+    for edge in edges:
+        fi, fj, f_correlation = edge
+        graph.addEdge(fi, fj, f_correlation)
+
     return graph
 
 
-def createTrees(nodes, edges):
+def createTrees(edges):
     def getNeighbors(v):
-        neighbors = set([edge[1]] for edge in filter(lambda edge: edge[0] == v, edges))
+        neighbors = set([edge[1] for edge in filter(lambda edge: edge[0] == v, edges)])
         return neighbors
-
     def DFS(temp, v, visited):
 
         # Mark the current vertex as visited
@@ -46,33 +47,37 @@ def createTrees(nodes, edges):
     # Method to retrieve connected components
     # in an undirected graph
     def connectedComponents(nodes):
-        visited = [False for i in nodes]
+        visited = {}
+        for v in nodes:
+            visited[v]=False
         cc = []
         for v in nodes:
             if not visited[v]:
                 temp = []
                 cc.append(DFS(temp, v, visited))
         return cc
-
+    nodes = set([edge[0] for edge in edges]).union(set([edge[1] for edge in edges]))
     cc = connectedComponents(nodes)
     return cc
 
 
-def FAST(X, y, t_relevance_threshold=0.06):
-    S = set()
-    _X=X.to_numpy()
-    _y=y.to_numpy()
-    # ==== Part 1: Irrelevant Feature Removal ====
+def FAST(X, y, t_relevance_threshold=0.07):
+    S = set([11,12,13,14,15])
+    _X = X.to_numpy()
+    _y = y.to_numpy()
+
+    # # ==== Part 1: Irrelevant Feature Removal ====
     features = list(X.columns)
-    for f in range(len(features)):
-        t_relevance = su_calculation(_X[f], _y)
-        if t_relevance > t_relevance_threshold:
-            S.add(f)
-        else:
-            print(f'{f}:{t_relevance}')
+    # for f in range(len(features)):
+    #     t_relevance = su_calculation(_X[f], _y)
+    #     if t_relevance > t_relevance_threshold:
+    #         S.add(f)
+    #     else:
+    #         print(f'{f}:{t_relevance}')
 
     # ==== Part 2: Minimum Spanning Tree Construction ====
-    graph = generateGraph(_X,S)
+    nodes_map = [node for node in S]
+    graph = generateGraph(_X, S, nodes_map)
     forest = graph.PrimMST()
 
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
@@ -85,10 +90,10 @@ def FAST(X, y, t_relevance_threshold=0.06):
             forest.remove(edge)
 
     S.clear()
-    trees = createTrees(features, forest)
+    trees = createTrees(forest)
     for tree in trees:
         su_list = [(f, su_calculation(_X[f], _y)) for f in tree]
         su_list.sort(key=lambda x: x[1], reverse=True)
-        fr = su_list[0]
-        S.add(fr)
+        fr = su_list[0][0]
+        S.add(features[fr])
     return S
