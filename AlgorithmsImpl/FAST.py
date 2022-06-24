@@ -5,7 +5,6 @@ from .PrimMST import Graph
 import itertools
 from joblib import Parallel, delayed
 
-
 def generateGraph(X, S, nodes_map):
     def calculateWeight(pair):
         fi, fj = pair
@@ -24,7 +23,6 @@ def generateGraph(X, S, nodes_map):
         graph.addEdge(fi, fj, f_correlation)
 
     return graph
-
 
 def createTrees(edges):
     def getNeighbors(v):
@@ -64,8 +62,15 @@ def createTrees(edges):
     cc = connectedComponents(nodes)
     return cc
 
-
+#A Fast Clustering Based Feature Subset Selection
 def FAST(X, y, t_relevance_threshold=None):
+    '''
+    A Fast Clustering Based Feature Subset Selection
+    :param X: dataframe with features values
+    :param y: dataframe/ pandas series with target values
+    :param t_relevance_threshold: float or None, minimum t-relevant threshold for irrelevant feature removal
+    :return: vector represent for each feature if it was selected or not
+    '''
     S = set()
     _X = X.to_numpy()
     _y = y.to_numpy()
