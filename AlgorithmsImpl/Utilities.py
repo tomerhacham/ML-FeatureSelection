@@ -2,11 +2,16 @@ import numpy as np
 from sklearnex import patch_sklearn
 patch_sklearn()
 from sklearn.feature_selection import f_classif
+from functools import wraps
 
 
-def ScoreWrapper(binaryFeatureSelector):
-    def activeSelector(X, y, *args, **kwargs):
-        selectedFeaturesVector = binaryFeatureSelector(X, y, *args, **kwargs)
+def WithScores(func):
+    @wraps(func)
+    def score_amplifier(X, y, *args, **kwargs):
+        selectedFeaturesVector = func(X, y, *args, **kwargs)
         invertedVector = np.invert(np.array(selectedFeaturesVector).astype(bool)).astype(int)
         scores, pvalues = f_classif(X,y)
-        (scores * invertedVector) + (np.finfo(float).max * selectedFeaturesVector)
+        amplified_scores = (scores * invertedVector) + (np.finfo(float).max * np.array(selectedFeaturesVector))
+        return amplified_scores
+
+    return score_amplifier

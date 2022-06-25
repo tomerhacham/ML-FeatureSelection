@@ -1,4 +1,7 @@
 from sklearnex import patch_sklearn
+
+from AlgorithmsImpl.Utilities import WithScores
+
 patch_sklearn()
 from random import random
 import numpy as np
@@ -41,7 +44,7 @@ def generateFitnessFucntion(X, y):
 
     return calculateFitness
 
-
+@WithScores
 def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=10,verbose=0):
     #X = dataTransformation(X)  # data transformation
     calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
@@ -51,7 +54,7 @@ def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=10,verbos
     Ymin = np.zeros(X.shape[1])
 
     updateLeader = generateUpdateLeaderFunction(Ymax, Ymin)  # generate lazy update function
-    for currIter in range(1,maxIter):
+    for currIter in range(2,maxIter):
         if verbose>0:
             print(f'{currIter}/{maxIter}')
         salps.sort(key=lambda salp: calculateFitness(salp), reverse=True)
