@@ -11,7 +11,7 @@ def WithScores(func):
         selectedFeaturesVector = func(X, y, *args, **kwargs)
         invertedVector = np.invert(np.array(selectedFeaturesVector).astype(bool)).astype(int)
         scores, pvalues = f_classif(X,y)
-        amplified_scores = (scores * invertedVector) + (np.finfo(float).max * np.array(selectedFeaturesVector))
+        amplified_scores = (scores * invertedVector) + ((np.max(scores)+1) * np.array(selectedFeaturesVector))
         return amplified_scores
 
     return score_amplifier
