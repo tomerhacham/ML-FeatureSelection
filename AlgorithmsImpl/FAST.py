@@ -1,3 +1,6 @@
+from sklearnex import patch_sklearn
+patch_sklearn()
+
 import math
 from ReliefF import ReliefF
 from skfeature.utility.mutual_information import su_calculation
