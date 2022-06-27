@@ -1,3 +1,4 @@
+from scipy.spatial.distance import hamming
 from sklearnex import patch_sklearn
 
 from AlgorithmsImpl.Utilities import WithScores
@@ -62,6 +63,32 @@ def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=10,verbos
         a1 = 2 * (math.e ** (-(4 * currIter / maxIter) ** 2))  # Eq.3
         for j in range(len(salps)):
             newLocation = updateLeader(salps[j], a1) if j == 0 else (salps[j] + salps[j - 1]) / 2
+            salps[j] = np.where(newLocation > binarization_threshold, 1, 0) # convert them into binary using threshold δ
+
+    salps.sort(key=lambda salp: calculateFitness(salp), reverse=True)
+    selectedFeatures = salps[0].tolist()
+    return selectedFeatures
+
+
+@WithScores
+def bSSA__New(X, y, population_size=20, maxIter=10,verbose=0):
+    X = dataTransformation(X)  # data transformation
+    calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
+    salps = [np.where(default_rng().random(X.shape[1]) > random(), 1, 0) for _ in
+             range(population_size)]  # creates initial population
+    Ymax = np.ones(X.shape[1])
+    Ymin = np.zeros(X.shape[1])
+
+    updateLeader = generateUpdateLeaderFunction(Ymax, Ymin)  # generate lazy update function
+    maxIter=maxIter+2
+    for currIter in range(2,maxIter):
+        if verbose>0:
+            print(f'{currIter}/{maxIter}')
+        salps.sort(key=lambda salp: calculateFitness(salp), reverse=True)
+        a1 = 2 * (math.e ** (-(4 * currIter / maxIter) ** 2))  # Eq.3
+        for j in range(len(salps)):
+            newLocation = updateLeader(salps[j], a1) if j == 0 else (salps[j] + salps[j - 1]) / 2
+            binarization_threshold = random() if j==0 else hamming(salps[0],salps[j])
             salps[j] = np.where(newLocation > binarization_threshold, 1, 0) # convert them into binary using threshold δ
 
     salps.sort(key=lambda salp: calculateFitness(salp), reverse=True)
