@@ -7,11 +7,11 @@ from functools import wraps
 
 def WithScores(func):
     @wraps(func)
-    def score_amplifier(X, y, *args, **kwargs):
+    def score_imputer(X, y, *args, **kwargs):
         selectedFeaturesVector = func(X, y, *args, **kwargs)
         invertedVector = np.invert(np.array(selectedFeaturesVector).astype(bool)).astype(int)
         scores, pvalues = f_classif(X,y)
         amplified_scores = (scores * invertedVector) + ((np.max(scores)+1) * np.array(selectedFeaturesVector))
         return amplified_scores
 
-    return score_amplifier
+    return score_imputer

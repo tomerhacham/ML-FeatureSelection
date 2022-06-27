@@ -77,10 +77,9 @@ def FAST(X, y, t_relevance_threshold=None):
     :return: vector represent for each feature if it was selected or not
     '''
     S = set()
-    #_X = X.to_numpy()
-    #_y = y.to_numpy()
     if t_relevance_threshold is None:
-        rf = ReliefF()
+        n_neighbors = X.shape[0] // 5 if X.shape[0] < 100 else 100
+        rf = ReliefF(n_neighbors=n_neighbors)
         rf.fit(X, y)
         index = math.floor(math.sqrt(len(X))*math.log(len(X)))
         feature = rf.top_features[index]

@@ -46,14 +46,15 @@ def generateFitnessFucntion(X, y):
 
 @WithScores
 def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=10,verbose=0):
-    #X = dataTransformation(X)  # data transformation
+    X = dataTransformation(X)  # data transformation
     calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
-    salps = [np.where(default_rng(42).random(X.shape[1]) > binarization_threshold, 1, 0) for _ in
+    salps = [np.where(default_rng().random(X.shape[1]) > binarization_threshold, 1, 0) for _ in
              range(population_size)]  # creates initial population
     Ymax = np.ones(X.shape[1])
     Ymin = np.zeros(X.shape[1])
 
     updateLeader = generateUpdateLeaderFunction(Ymax, Ymin)  # generate lazy update function
+    maxIter=maxIter+2
     for currIter in range(2,maxIter):
         if verbose>0:
             print(f'{currIter}/{maxIter}')
