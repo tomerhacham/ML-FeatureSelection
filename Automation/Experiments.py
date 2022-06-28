@@ -1,8 +1,9 @@
 from ReliefF import ReliefF
+from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, precision_recall_curve
 from sklearnex import patch_sklearn
 
 patch_sklearn()
-from sklearn.feature_selection import VarianceThreshold, SelectKBest, SelectFdr, f_classif, RFE
+from sklearn.feature_selection import VarianceThreshold, SelectKBest, SelectFdr, RFE
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import PowerTransformer
 from sklearn.pipeline import Pipeline
@@ -22,9 +23,9 @@ classifiers = [('NB',lambda: MultinomialNB()),
                ('RandomForest', lambda: RandomForestClassifier()),
                ('K-NN', lambda: KNeighborsClassifier()),
                ]
-
+# mRMR, f_classIf, RFE, ReliefF
 fs_methods = [('mRMR', lambda X, y: mrmr(X, y)),
-              ('f_classIf', lambda X, y: SelectFdr(alpha=0.1).fit(X,y).scores_),
+              ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X,y).scores_),
               ('RFE', lambda X, y: RFE(estimator=SVC()).fit(X,y).scores_),
               ('ReliefF', lambda X, y: ReliefF().fit(X,y).feature_scores if X.shape[0] > 100 else ReliefF(n_neighbors=X.shape[0] // 5).fit(X,y).feature_scores )
               ]
@@ -52,14 +53,26 @@ def get_CV_generator(X):
         return LeavePOut(2)
 
 
+def get_n_of_classes(y):
+    pass
+
+
 for dataset in datasets:
     X, y = load_dataset(dataset)
     _X, _y = preprocess_pipeline.fit_transform(X, y)
     for fs_method_name, fs_method in list([]):
-        selectKBest = SelectKBest(score_func=fs_method, k=100).fit(_X, _y)
+        selectKBest = SelectKBest(score_func=fs_method, k=100)
+        selectKBest.fit(_X, _y)
         score = selectKBest.scores_
         for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
             k_best_features = np.argpartition(score, -K)[-K:]
             for name, generate_func in classifiers:
                 clf = generate_func()
                 cv_method = get_CV_generator(_X)
+                #  ACC, MCC ,AUC,  PR-AUC. יצוין כי בבעיות Multi-class
+                n_classes = get_n_of_classes(y)
+
+                metrics = {'ACC':accuracy_score,
+                            'MCC':matthews_corrcoef,
+                           'AUC':lambda *args: roc_auc_score(*args,multi_class='ovr', average='micro') if n_classes >2 else roc_auc_score(*args) ,
+                           'PR-AUC':precision_recall_curve,}
