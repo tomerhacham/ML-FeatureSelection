@@ -15,8 +15,11 @@ from sklearn.neighbors import KNeighborsClassifier
 
 
 def dataTransformation(X):
-    _X = PCA().fit_transform(X)
-    _X = FastICA().fit_transform(_X)
+    pca,ica=PCA(), FastICA()
+    _X = pca.fit_transform(X)
+    _X = ica.fit_transform(X)
+    asd=ica.inverse_transform(_X)
+    asd=pca.inverse_transform(asd)
     return _X
 
 
@@ -46,8 +49,8 @@ def generateFitnessFucntion(X, y):
     return calculateFitness
 
 @WithScores
-def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=10,verbose=0):
-    X = dataTransformation(X)  # data transformation
+def bSSA(__X, y, binarization_threshold=0.6, population_size=100, maxIter=70,verbose=0):
+    X = dataTransformation(__X)  # data transformation
     calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
     salps = [np.where(default_rng().random(X.shape[1]) > binarization_threshold, 1, 0) for _ in
              range(population_size)]  # creates initial population
@@ -71,7 +74,7 @@ def bSSA(X, y, binarization_threshold=0.6, population_size=20, maxIter=10,verbos
 
 
 @WithScores
-def bSSA__New(X, y, population_size=20, maxIter=10,verbose=0):
+def bSSA__New(X, y, population_size=100, maxIter=70,verbose=0):
     X = dataTransformation(X)  # data transformation
     calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
     salps = [np.where(default_rng().random(X.shape[1]) > random(), 1, 0) for _ in
