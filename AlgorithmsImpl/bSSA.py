@@ -1,9 +1,9 @@
-from scipy.spatial.distance import hamming
 from sklearnex import patch_sklearn
+patch_sklearn()
 
+from scipy.spatial.distance import hamming
 from AlgorithmsImpl.Utilities import WithScores
 
-patch_sklearn()
 from random import random
 import numpy as np
 import math
