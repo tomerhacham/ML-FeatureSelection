@@ -87,7 +87,7 @@ for dataset in datasets:
                 print(f'n_classes:{n_classes}')
                 metrics = {'ACC': lambda y_true, y_score:accuracy_score(y_true,np.argmax(y_score,axis=1)),
                            'MCC': lambda y_true, y_score:matthews_corrcoef(y_true,np.argmax(y_score,axis=1)),
-                            'PR-AUC':lambda y_true, y_score: average_precision_score(y_true,np.take_along_axis(y_score,y_true[:,None],axis=1),average='micro')}
+                            'PR-AUC':lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true],y_score)}
                 if n_classes > 2:
                     metrics['AUC'] = lambda y_true, y_score: roc_auc_score(y_true, y_score,multi_class='ovr', average='micro')
                 else:
@@ -119,4 +119,3 @@ for dataset in datasets:
                         result[metric].append(score)
 
 
-                    #test_scores = roc_auc_score(y_true=y_test, y_score=y_pred,multi_class = 'ovr', average = 'macro')
