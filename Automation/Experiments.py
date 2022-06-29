@@ -67,6 +67,22 @@ def load_dataset():
     X, y = dataset.loc[:, dataset.columns != 'y'], dataset['y']
     return X, y
 
+def get_metrics(n_classes):
+    metrics = {'ACC': lambda y_true, y_score: accuracy_score(y_true, np.argmax(y_score, axis=1)),
+               'MCC': lambda y_true, y_score: matthews_corrcoef(y_true, np.argmax(y_score, axis=1)),
+               'PR-AUC': lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true], y_score)}
+    if n_classes > 2:
+        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(y_true, y_score, multi_class='ovr', average='micro')
+    else:
+        metrics['AUC'] = roc_auc_score
+    return metrics
+
+def split_test_train(train_indexes,test_indexes,X,y):
+        X_train = X[train_indexes, :]
+        y_train = y[train_indexes]
+        X_test = X[test_indexes, :]
+        y_test = y[test_indexes]
+        return X_train, y_train, X_test, y_test
 
 for dataset in datasets:
     X, y = load_dataset()
@@ -82,18 +98,9 @@ for dataset in datasets:
             for name, generate_func in classifiers:
                 clf = generate_func()
                 cv_method = get_CV_generator(_X)
-                #  ACC, MCC ,AUC,  PR-AUC. יצוין כי בבעיות Multi-class
                 n_classes = y.nunique(dropna=False)
                 print(f'n_classes:{n_classes}')
-                metrics = {'ACC': lambda y_true, y_score:accuracy_score(y_true,np.argmax(y_score,axis=1)),
-                           'MCC': lambda y_true, y_score:matthews_corrcoef(y_true,np.argmax(y_score,axis=1)),
-                            'PR-AUC':lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true],y_score)}
-                if n_classes > 2:
-                    metrics['AUC'] = lambda y_true, y_score: roc_auc_score(y_true, y_score,multi_class='ovr', average='micro')
-                else:
-                    metrics['AUC'] = roc_auc_score
-
-                X, y = _X[:, k_best_features], _y
+                metrics = get_metrics(n_classes)
                 result = {'fit-time':[],
                           'inference-time':[],
                           'ACC':[],
@@ -101,21 +108,34 @@ for dataset in datasets:
                           'MCC':[],
                           'PR-AUC':[],
                           }
-                for train, test in cv_method.split(X,y):
-                    X_train=X[train,:]
-                    y_train = y[train]
-                    X_test = X[test,:]
-                    y_test = y[test]
-                    start_time = time.time()
-
+                for train, test in cv_method.split(_X[:, k_best_features], _y):
+                    X_train, y_train, X_test, y_test = split_test_train(train,test,_X[:, k_best_features], _y)
+                    start_time = time.time()            # start timer
                     clf.fit(X_train, y_train)
-                    fit_time = time.time() - start_time
+                    fit_time = time.time() - start_time # measure fit time
 
                     y_pred = clf.predict_proba(X_test)
-                    inference_time = time.time() - start_time - fit_time
+                    inference_time = (time.time() - start_time - fit_time)/X_test.shape[0]    # measure inference time
 
                     for metric in metrics:
                         score = metrics[metric](y_test,y_pred)
-                        result[metric].append(score)
+                        result[metric].append(score)       # append score for each metric
+                    record = {
+                                'Dataset Name':'',
+                                'Number of samples':'',
+                                'Original Number of features':'',
+                                'Filtering Algorithm':'',
+                                'Learning Algorithm':'',
+                                'Number of features selected (K)':'',
+                                'CV Method':'',
+                                'Fold':'', #on all cv methods there is fold?
+                                'Measure Type':'',
+                                'Measure Value':'',
+                                'List of Selected Features Names':'',
+                                'Selected Features scores':'',
+                                'Feature Selection time':'',
+                                'Fit time':'',
+                                'Inference time per record':'',
+                              }
 
 
