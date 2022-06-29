@@ -52,13 +52,13 @@ datasets = ['as']
 def get_CV_generator(X):
     n_sample = X.shape[0]
     if n_sample > 1000:
-        return KFold(n_splits=5)
+        return '5Fold', KFold(n_splits=5)
     elif n_sample > 100:
-        return KFold(n_splits=10)
+        return '10Fold', KFold(n_splits=10)
     elif n_sample > 50:
-        return LeaveOneOut()
+        return 'Leave One Out', LeaveOneOut()
     else:
-        return LeavePOut(2)
+        return 'Leave PairOut', LeavePOut(2)
 
 
 def load_dataset():
@@ -66,6 +66,7 @@ def load_dataset():
     dataset = dataset.sample(200)
     X, y = dataset.loc[:, dataset.columns != 'y'], dataset['y']
     return X, y
+
 
 def get_metrics(n_classes):
     metrics = {'ACC': lambda y_true, y_score: accuracy_score(y_true, np.argmax(y_score, axis=1)),
@@ -77,65 +78,118 @@ def get_metrics(n_classes):
         metrics['AUC'] = roc_auc_score
     return metrics
 
-def split_test_train(train_indexes,test_indexes,X,y):
-        X_train = X[train_indexes, :]
-        y_train = y[train_indexes]
-        X_test = X[test_indexes, :]
-        y_test = y[test_indexes]
-        return X_train, y_train, X_test, y_test
 
+def split_test_train(train_indexes, test_indexes, X, y):
+    X_train = X[train_indexes, :]
+    y_train = y[train_indexes]
+    X_test = X[test_indexes, :]
+    y_test = y[test_indexes]
+    return X_train, y_train, X_test, y_test
+
+
+def cross_validate(clf, X, y, cv_method, metrics):
+    result = {'fit-time': [],
+              'inference-time': [],
+              'ACC': [],
+              'AUC': [],
+              'MCC': [],
+              'PR-AUC': [],
+              }
+    for train, test in cv_method.split(X, y):
+        X_train, y_train, X_test, y_test = split_test_train(train, test, X, y)
+        start_time = time.time()  # start timer
+        clf.fit(X_train, y_train)
+        fit_time = time.time() - start_time  # measure fit time
+        result['fit-time'].append(fit_time)
+        y_pred = clf.predict_proba(X_test)
+        inference_time = (time.time() - start_time - fit_time) / X_test.shape[0]  # measure inference time
+        result['inference-time'].append(inference_time)
+        for metric in metrics:
+            score = metrics[metric](y_test, y_pred)
+            result[metric].append(score)  # append score for each metric
+
+    return result
+
+
+def get_new_record_to_results():
+    return {
+        'Dataset Name': '',
+        'Number of samples': '',
+        'Original Number of features': '',
+        'Filtering Algorithm': '',
+        'Learning Algorithm': '',
+        'Number of features selected (K)': '',
+        'CV Method': '',
+        'Fold': '',  # on all cv methods there is fold?
+        'Measure Type': '',
+        'Measure Value': '',
+        'List of Selected Features Names': '',
+        'Selected Features scores': '',
+        'Feature Selection time': '',
+        'Fit time': '',
+        'Inference time per record': '',
+    }
+
+
+results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
 for dataset in datasets:
     X, y = load_dataset()
     features_names = list(X.columns)
-    _X = preprocess_pipeline.fit_transform(X, y)
-    _y = y.to_numpy()
+    _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
     for fs_method_name, fs_method in fs_methods:
         selectKBest = SelectKBest(score_func=fs_method, k=100)
+        start_time = time.time()  # start timer
         selectKBest.fit(_X, _y)
+        feature_selection_time = time.time() - start_time  # measure feature selection time
         score = selectKBest.scores_
         for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
             k_best_features = np.argpartition(score, -K)[-K:]
-            for name, generate_func in classifiers:
+            for clf_name, generate_func in classifiers:
                 clf = generate_func()
-                cv_method = get_CV_generator(_X)
+                cv_method_name,cv_method = get_CV_generator(_X)
                 n_classes = y.nunique(dropna=False)
                 print(f'n_classes:{n_classes}')
                 metrics = get_metrics(n_classes)
-                result = {'fit-time':[],
-                          'inference-time':[],
-                          'ACC':[],
-                          'AUC':[],
-                          'MCC':[],
-                          'PR-AUC':[],
-                          }
-                for train, test in cv_method.split(_X[:, k_best_features], _y):
-                    X_train, y_train, X_test, y_test = split_test_train(train,test,_X[:, k_best_features], _y)
-                    start_time = time.time()            # start timer
-                    clf.fit(X_train, y_train)
-                    fit_time = time.time() - start_time # measure fit time
-
-                    y_pred = clf.predict_proba(X_test)
-                    inference_time = (time.time() - start_time - fit_time)/X_test.shape[0]    # measure inference time
-
-                    for metric in metrics:
-                        score = metrics[metric](y_test,y_pred)
-                        result[metric].append(score)       # append score for each metric
+                # region oldCV
+                # result = {'fit-time': [],
+                #           'inference-time': [],
+                #           'ACC': [],
+                #           'AUC': [],
+                #           'MCC': [],
+                #           'PR-AUC': [],
+                #           }
+                # for train, test in cv_method.split(_X[:, k_best_features], _y):
+                #
+                #     X_train, y_train, X_test, y_test = split_test_train(train, test, _X[:, k_best_features], _y)
+                #     start_time = time.time()  # start timer
+                #     clf.fit(X_train, y_train)
+                #     fit_time = time.time() - start_time  # measure fit time
+                #
+                #     y_pred = clf.predict_proba(X_test)
+                #     inference_time = (time.time() - start_time - fit_time) / X_test.shape[0]  # measure inference time
+                #
+                #     for metric in metrics:
+                #         score = metrics[metric](y_test, y_pred)
+                #         result[metric].append(score)  # append score for each metric
+                # endregion
+                cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
+                avg_fit_time, avg_inference_time = cv_result['fit-time'].mean(), cv_result['inference-time'].mean()
+                for metric in metrics:
                     record = {
-                                'Dataset Name':'',
-                                'Number of samples':'',
-                                'Original Number of features':'',
-                                'Filtering Algorithm':'',
-                                'Learning Algorithm':'',
-                                'Number of features selected (K)':'',
-                                'CV Method':'',
-                                'Fold':'', #on all cv methods there is fold?
-                                'Measure Type':'',
-                                'Measure Value':'',
-                                'List of Selected Features Names':'',
-                                'Selected Features scores':'',
-                                'Feature Selection time':'',
-                                'Fit time':'',
-                                'Inference time per record':'',
-                              }
-
-
+                        'Dataset Name': {dataset},
+                        'Number of samples': {X.shape[0]},
+                        'Original Number of features': {X.shape[1]},
+                        'Filtering Algorithm': {fs_method_name},
+                        'Learning Algorithm': {clf_name},
+                        'Number of features selected (K)': {K},
+                        'CV Method': {cv_method_name},
+                        'Fold': '',  # on all cv methods there is fold?
+                        'Measure Type': {metric},
+                        'Measure Value': {metrics[metric].mean()},
+                        'List of Selected Features Names': {[features_names[i] for i in k_best_features]},
+                        'Selected Features scores': {[score[i] for i in k_best_features]},
+                        'Feature Selection time': {feature_selection_time},
+                        'Fit time': {avg_fit_time},
+                        'Inference time per record': {avg_inference_time},
+                    }
+                    results_table.append(record,ignore_index=True)
