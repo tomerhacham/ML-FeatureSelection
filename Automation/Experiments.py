@@ -21,13 +21,15 @@ from sklearn.model_selection import KFold, LeaveOneOut, LeavePOut, cross_validat
 from skfeature.function.information_theoretical_based.MRMR import mrmr
 import numpy as np
 import pandas as pd
+from statistics import mean
+
 from sklearn.metrics import get_scorer
 
 # NB, SVM, LogisticsRegression, RandomForest, k-nearest neighbors (K-NN
-classifiers = [('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
-               ('SVM', lambda: SVC()),
-               ('LogisticsRegression', lambda: LogisticRegression()),
-               ('RandomForest', lambda: RandomForestClassifier()),
+classifiers = [#('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
+               #('SVM', lambda: SVC(probability=True)),
+               #('LogisticsRegression', lambda: LogisticRegression()),
+               #('RandomForest', lambda: RandomForestClassifier()),
                ('K-NN', lambda: KNeighborsClassifier()),
                ]
 # mRMR, f_classIf, RFE, ReliefF
@@ -36,7 +38,7 @@ fs_methods = [  # /('bSSA', lambda X, y: bSSA(X,y)),
     # ('FAST', lambda X, y: FAST(X, y)),
     ('mRMR', lambda X, y: mrmr(X, y)),
     ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
-    ('RFE', lambda X, y: RFE(estimator=SVC()).fit(X, y).scores_),
+    ('RFE', lambda X, y:RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
     ('ReliefF',
      lambda X, y: ReliefF().fit(X, y).feature_scores if X.shape[0] > 100 else ReliefF(n_neighbors=X.shape[0] // 5).fit(
          X, y).feature_scores)
@@ -73,7 +75,7 @@ def get_metrics(n_classes):
                'MCC': lambda y_true, y_score: matthews_corrcoef(y_true, np.argmax(y_score, axis=1)),
                'PR-AUC': lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true], y_score)}
     if n_classes > 2:
-        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(y_true, y_score, multi_class='ovr', average='micro')
+        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(y_true, y_score, multi_class='ovr', average='macro')
     else:
         metrics['AUC'] = roc_auc_score
     return metrics
@@ -145,6 +147,7 @@ for dataset in datasets:
         for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
             k_best_features = np.argpartition(score, -K)[-K:]
             for clf_name, generate_func in classifiers:
+                print(f'classifier:{clf_name}, FS:{fs_method_name}')
                 clf = generate_func()
                 cv_method_name,cv_method = get_CV_generator(_X)
                 n_classes = y.nunique(dropna=False)
@@ -172,24 +175,26 @@ for dataset in datasets:
                 #         score = metrics[metric](y_test, y_pred)
                 #         result[metric].append(score)  # append score for each metric
                 # endregion
-                cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
-                avg_fit_time, avg_inference_time = cv_result['fit-time'].mean(), cv_result['inference-time'].mean()
-                for metric in metrics:
+
+                cv_result = cross_validate(clf, _X[:, k_best_features], _y if clf_name !='KNN' else _y.ravel(), cv_method, metrics)
+                avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
+                for metric in metrics.keys():
                     record = {
-                        'Dataset Name': {dataset},
-                        'Number of samples': {X.shape[0]},
-                        'Original Number of features': {X.shape[1]},
-                        'Filtering Algorithm': {fs_method_name},
-                        'Learning Algorithm': {clf_name},
-                        'Number of features selected (K)': {K},
-                        'CV Method': {cv_method_name},
+                        'Dataset Name': dataset,
+                        'Number of samples': X.shape[0],
+                        'Original Number of features': X.shape[1],
+                        'Filtering Algorithm': fs_method_name,
+                        'Learning Algorithm': clf_name,
+                        'Number of features selected (K)': K,
+                        'CV Method': cv_method_name,
                         'Fold': '',  # on all cv methods there is fold?
-                        'Measure Type': {metric},
-                        'Measure Value': {metrics[metric].mean()},
-                        'List of Selected Features Names': {[features_names[i] for i in k_best_features]},
-                        'Selected Features scores': {[score[i] for i in k_best_features]},
-                        'Feature Selection time': {feature_selection_time},
-                        'Fit time': {avg_fit_time},
-                        'Inference time per record': {avg_inference_time},
+                        'Measure Type': metric,
+                        'Measure Value': mean(cv_result[metric]),
+                        'List of Selected Features Names': tuple([features_names[i] for i in k_best_features]),
+                        'Selected Features scores': tuple([score[i] for i in k_best_features]),
+                        'Feature Selection time': feature_selection_time,
+                        'Fit time': avg_fit_time,
+                        'Inference time per record': avg_inference_time,
                     }
                     results_table.append(record,ignore_index=True)
+    results_table.to_csv('results.csv')
