@@ -8,16 +8,19 @@ from .PrimMST import Graph
 import itertools
 from joblib import Parallel, delayed
 
+from .Utilities import WithScores
+
+
 def generateGraph(X, S, nodes_map):
     def calculateWeight(pair):
         fi, fj = pair
         fi_tag, fj_tag = nodes_map[fi], nodes_map[fj]
-        f_correlation = su_calculation(X[fi_tag], X[fj_tag])
+        f_correlation = su_calculation(X[:,fi_tag], X[:,fj_tag])
         return (fi, fj, f_correlation)
 
     graph = Graph(len(S))
     pairs_of_features = list(itertools.combinations([i for i in range(len(S))], 2))
-    print(f'pairs: {len(pairs_of_features)}')
+    #print(f'pairs: {len(pairs_of_features)}')
     edges = Parallel(n_jobs=-1,
                      verbose=10)(delayed(calculateWeight)(pair) for pair in pairs_of_features)
 
@@ -66,6 +69,7 @@ def createTrees(edges):
     return cc
 
 #A Fast Clustering Based Feature Subset Selection
+@WithScores
 def FAST(X, y, t_relevance_threshold=None):
     '''
     A Fast Clustering Based Feature Subset Selection
@@ -83,13 +87,13 @@ def FAST(X, y, t_relevance_threshold=None):
         rf.fit(X, y)
         index = math.floor(math.sqrt(len(X))*math.log(len(X)))
         feature = rf.top_features[index]
-        t_relevance_threshold=su_calculation(X[feature],y)
+        t_relevance_threshold=su_calculation(X[:,feature],y)
 
     # # ==== Part 1: Irrelevant Feature Removal ====
     # features = list(X.columns)
     features = [i for i in range(X.shape[1])]
     for f in features:
-        t_relevance = su_calculation(X[f], y)
+        t_relevance = su_calculation(X[:,f], y)
         if t_relevance > t_relevance_threshold:
             S.add(f)
         else:
@@ -104,16 +108,16 @@ def FAST(X, y, t_relevance_threshold=None):
     # ==== Part 3: Tree Partition and Representative Feature Selection ====
     for edge in forest.copy():
         i, j = edge
-        su_fifj = su_calculation(X[i], X[j])
-        su_fic = su_calculation(X[i], y)
-        su_fjc = su_calculation(X[j], y)
+        su_fifj = su_calculation(X[:,i], X[:,j])
+        su_fic = su_calculation(X[:,i], y)
+        su_fjc = su_calculation(X[:,j], y)
         if su_fifj < su_fic and su_fifj < su_fjc:
             forest.remove(edge)
 
     S.clear()
     trees = createTrees(forest)
     for tree in trees:
-        su_list = [(f, su_calculation(X[f], y)) for f in tree]
+        su_list = [(f, su_calculation(X[:,f], y)) for f in tree]
         su_list.sort(key=lambda x: x[1], reverse=True)
         fr = su_list[0][0]
         S.add(fr)
