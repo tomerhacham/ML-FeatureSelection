@@ -28,10 +28,10 @@ from sklearn.metrics import get_scorer
 
 # NB, SVM, LogisticsRegression, RandomForest, k-nearest neighbors (K-NN
 # classifiers list hold tuples which contains the classifier name and a function to generate such one
-classifiers = [  # ('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
-    # ('SVM', lambda: SVC(probability=True)),
-    # ('LogisticsRegression', lambda: LogisticRegression()),
-    # ('RandomForest', lambda: RandomForestClassifier()),
+classifiers = [   ('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
+     ('SVM', lambda: SVC(probability=True)),
+     ('LogisticsRegression', lambda: LogisticRegression()),
+     ('RandomForest', lambda: RandomForestClassifier()),
     ('K-NN', lambda: KNeighborsClassifier()),
 ]
 # mRMR, f_classIf, RFE, ReliefF
@@ -42,7 +42,7 @@ fs_methods = [  ('bSSA', lambda X, y,: bSSA(X, y)),
                 ('mRMR', lambda X, y: mrmr(X, y)),
                 ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
                 ('RFE', lambda X, y: RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
-                ('ReliefF',
+                ( 'ReliefF',
                  lambda X, y: ReliefFFitter(X,y).feature_scores)
             ]
 
