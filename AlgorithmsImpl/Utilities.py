@@ -7,6 +7,8 @@ from ReliefF import ReliefF
 
 
 def WithScores(func):
+    '''Util function the generate decorator in order to impute scores
+     for algorithm that return features using binary representation'''
     @wraps(func)
     def score_imputer(X, y, *args, **kwargs):
         selectedFeaturesVector = func(X, y, *args, **kwargs)
@@ -18,6 +20,7 @@ def WithScores(func):
     return score_imputer
 
 def ReliefFFitter(X,y):
+    '''Util function to wrap the fitting process of ReliefF in order to adhere the Sklearn convention'''
     reliefF = ReliefF() if X.shape[0] > 100 else ReliefF(n_neighbors=X.shape[0] // 5)
     reliefF.fit(X, y)
     return reliefF

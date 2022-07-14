@@ -27,6 +27,7 @@ from statistics import mean
 from sklearn.metrics import get_scorer
 
 # NB, SVM, LogisticsRegression, RandomForest, k-nearest neighbors (K-NN
+# classifiers list hold tuples which contains the classifier name and a function to generate such one
 classifiers = [  # ('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
     # ('SVM', lambda: SVC(probability=True)),
     # ('LogisticsRegression', lambda: LogisticRegression()),
@@ -34,7 +35,7 @@ classifiers = [  # ('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('
     ('K-NN', lambda: KNeighborsClassifier()),
 ]
 # mRMR, f_classIf, RFE, ReliefF
-# X is pandas dataframe, Y is numpy array
+# fs_methods list holds tuples of the feature selection method name and a function which generalize the process
 fs_methods = [  ('bSSA', lambda X, y,: bSSA(X, y)),
                 ('bSSA_New', lambda X, y: bSSA__New(X, y)),
                 ('FAST', lambda X, y: FAST(X, y)),
@@ -45,13 +46,14 @@ fs_methods = [  ('bSSA', lambda X, y,: bSSA(X, y)),
                  lambda X, y: ReliefFFitter(X,y).feature_scores)
             ]
 
-# Define pipeline
+# Define the preprocess pipeline
 preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('varianceThreshold', VarianceThreshold()),
                                 ('powerTransformer', PowerTransformer())])
 datasets = ['as']
 
 def get_CV_generator(X):
+    '''Return the CV method according  the number of samples of X'''
     n_sample = X.shape[0]
     if n_sample > 1000:
         return '5Fold', KFold(n_splits=5)
@@ -71,6 +73,7 @@ def load_dataset():
 
 
 def get_metrics(n_classes):
+    '''Returns the metrics according the number of classes of the dataset'''
     metrics = {'ACC': lambda y_true, y_score: accuracy_score(y_true, np.argmax(y_score, axis=1)),
                'MCC': lambda y_true, y_score: matthews_corrcoef(y_true, np.argmax(y_score, axis=1)),
                'PR-AUC': lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true], y_score)}
@@ -82,6 +85,7 @@ def get_metrics(n_classes):
 
 
 def split_test_train(train_indexes, test_indexes, X, y):
+    '''Returns splitted dataset accoring to the given indexes'''
     X_train = X[train_indexes, :]
     y_train = y[train_indexes]
     X_test = X[test_indexes, :]
@@ -90,6 +94,9 @@ def split_test_train(train_indexes, test_indexes, X, y):
 
 
 def cross_validate(clf, X, y, cv_method, metrics):
+    '''Performs cross validation on the dataset according a given cross validation method.
+        The function returns dictionary with the requested result which should be derived from the metrics
+    '''
     result = {'fit-time': [],
               'inference-time': [],
               'ACC': [],
@@ -114,6 +121,7 @@ def cross_validate(clf, X, y, cv_method, metrics):
 
 
 def get_new_record_to_results():
+    '''Util function to generate new record on the experiment'''
     return {
         'Dataset Name': '',
         'Number of samples': '',
@@ -144,8 +152,8 @@ for dataset in datasets:
         selectKBest.fit(_X, _y)
         feature_selection_time = time.time() - start_time  # measure feature selection time
         score = selectKBest.scores_
-        #for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
-        for K in list([1]):
+        for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
+        # for K in list([1]):
             k_best_features = np.argpartition(score, -K)[-K:]
             for clf_name, generate_func in classifiers:
                 print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')

@@ -1,9 +1,7 @@
 # A Python program for Prim's Minimum Spanning Tree (MST) algorithm.
 # The program is for adjacency matrix representation of the graph
 
-import sys  # Library for INT_MAX
-
-
+import sys
 class Graph():
 
     def __init__(self, vertices):
@@ -78,22 +76,4 @@ class Graph():
         return edges
         self.printMST(parent)
 
-#
-# g = Graph(5)
-# m= [[0, 2, 0, 6, 0],
-#            [2, 0, 3, 8, 5],
-#            [0, 3, 0, 0, 7],
-#            [6, 8, 0, 0, 9],
-#            [0, 5, 7, 9, 0]]
-#
-# for src in range(len(m)):
-#     for dest in range(len(m[src])):
-#         g.addEdge(src,dest,m[src][dest])
-# g.primMST();
 
-# Edge   Weight
-# 0 - 1    2
-# 1 - 2    3
-# 0 - 3    6
-# 1 - 4    5
-# Contributed by Divyanshu Mehta

@@ -1,17 +1,16 @@
-# from sklearnex import patch_sklearn
-# patch_sklearn()
-
 import math
 from ReliefF import ReliefF
 from skfeature.utility.mutual_information import su_calculation
 from .PrimMST import Graph
 import itertools
 from joblib import Parallel, delayed
-
 from .Utilities import WithScores
 
 
 def generateGraph(X, S, nodes_map):
+    '''Generate graph using parallel computation
+        the edges of the graphs weights as the f_correlation between the Fj and Fj features
+    '''
     def calculateWeight(pair):
         fi, fj = pair
         fi_tag, fj_tag = nodes_map[fi], nodes_map[fj]
@@ -20,7 +19,6 @@ def generateGraph(X, S, nodes_map):
 
     graph = Graph(len(S))
     pairs_of_features = list(itertools.combinations([i for i in range(len(S))], 2))
-    #print(f'pairs: {len(pairs_of_features)}')
     edges = Parallel(n_jobs=-1,
                      verbose=10)(delayed(calculateWeight)(pair) for pair in pairs_of_features)
 
@@ -31,6 +29,7 @@ def generateGraph(X, S, nodes_map):
     return graph
 
 def createTrees(edges):
+    '''Returns the Connected component of the graph using DFS'''
     def getNeighbors(v):
         neighbors = set([edge[1] for edge in filter(lambda edge: edge[0] == v, edges)])
         return neighbors
@@ -90,7 +89,6 @@ def FAST(X, y, t_relevance_threshold=None):
         t_relevance_threshold=su_calculation(X[:,feature],y)
 
     # # ==== Part 1: Irrelevant Feature Removal ====
-    # features = list(X.columns)
     features = [i for i in range(X.shape[1])]
     for f in features:
         t_relevance = su_calculation(X[:,f], y)
