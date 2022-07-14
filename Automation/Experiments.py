@@ -1,12 +1,13 @@
+import math
 import time
 
-from sklearnex import patch_sklearn
-
-patch_sklearn()
+# from sklearnex import patch_sklearn
+# patch_sklearn()
 from ReliefF import ReliefF
 from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, precision_recall_curve, make_scorer, \
     average_precision_score
 from AlgorithmsImpl.FAST import FAST
+from AlgorithmsImpl.Utilities import ReliefFFitter
 from AlgorithmsImpl.bSSA import bSSA, bSSA__New
 from sklearn.feature_selection import VarianceThreshold, SelectKBest, SelectFdr, RFE
 from sklearn.impute import SimpleImputer
@@ -26,30 +27,29 @@ from statistics import mean
 from sklearn.metrics import get_scorer
 
 # NB, SVM, LogisticsRegression, RandomForest, k-nearest neighbors (K-NN
-classifiers = [#('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
-               #('SVM', lambda: SVC(probability=True)),
-               #('LogisticsRegression', lambda: LogisticRegression()),
-               #('RandomForest', lambda: RandomForestClassifier()),
-               ('K-NN', lambda: KNeighborsClassifier()),
-               ]
-# mRMR, f_classIf, RFE, ReliefF
-fs_methods = [  # /('bSSA', lambda X, y: bSSA(X,y)),
-    # ('bSSA_New', lambda X, y: bSSA__New(X, y)),
-    # ('FAST', lambda X, y: FAST(X, y)),
-    ('mRMR', lambda X, y: mrmr(X, y)),
-    ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
-    ('RFE', lambda X, y:RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
-    ('ReliefF',
-     lambda X, y: ReliefF().fit(X, y).feature_scores if X.shape[0] > 100 else ReliefF(n_neighbors=X.shape[0] // 5).fit(
-         X, y).feature_scores)
+classifiers = [  # ('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
+    # ('SVM', lambda: SVC(probability=True)),
+    # ('LogisticsRegression', lambda: LogisticRegression()),
+    # ('RandomForest', lambda: RandomForestClassifier()),
+    ('K-NN', lambda: KNeighborsClassifier()),
 ]
+# mRMR, f_classIf, RFE, ReliefF
+# X is pandas dataframe, Y is numpy array
+fs_methods = [  ('bSSA', lambda X, y,: bSSA(X, y)),
+                ('bSSA_New', lambda X, y: bSSA__New(X, y)),
+                ('FAST', lambda X, y: FAST(X, y)),
+                ('mRMR', lambda X, y: mrmr(X, y)),
+                ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
+                ('RFE', lambda X, y: RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
+                ('ReliefF',
+                 lambda X, y: ReliefFFitter(X,y).feature_scores)
+            ]
 
 # Define pipeline
 preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('varianceThreshold', VarianceThreshold()),
                                 ('powerTransformer', PowerTransformer())])
 datasets = ['as']
-
 
 def get_CV_generator(X):
     n_sample = X.shape[0]
@@ -136,48 +136,30 @@ def get_new_record_to_results():
 results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
 for dataset in datasets:
     X, y = load_dataset()
-    features_names = list(X.columns)
     _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
+    features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
     for fs_method_name, fs_method in fs_methods:
         selectKBest = SelectKBest(score_func=fs_method, k=100)
         start_time = time.time()  # start timer
         selectKBest.fit(_X, _y)
         feature_selection_time = time.time() - start_time  # measure feature selection time
         score = selectKBest.scores_
-        for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
+        #for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
+        for K in list([1]):
             k_best_features = np.argpartition(score, -K)[-K:]
             for clf_name, generate_func in classifiers:
-                print(f'classifier:{clf_name}, FS:{fs_method_name}')
+                print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')
                 clf = generate_func()
-                cv_method_name,cv_method = get_CV_generator(_X)
+                cv_method_name, cv_method = get_CV_generator(_X)
                 n_classes = y.nunique(dropna=False)
                 print(f'n_classes:{n_classes}')
                 metrics = get_metrics(n_classes)
-                # region oldCV
-                # result = {'fit-time': [],
-                #           'inference-time': [],
-                #           'ACC': [],
-                #           'AUC': [],
-                #           'MCC': [],
-                #           'PR-AUC': [],
-                #           }
-                # for train, test in cv_method.split(_X[:, k_best_features], _y):
-                #
-                #     X_train, y_train, X_test, y_test = split_test_train(train, test, _X[:, k_best_features], _y)
-                #     start_time = time.time()  # start timer
-                #     clf.fit(X_train, y_train)
-                #     fit_time = time.time() - start_time  # measure fit time
-                #
-                #     y_pred = clf.predict_proba(X_test)
-                #     inference_time = (time.time() - start_time - fit_time) / X_test.shape[0]  # measure inference time
-                #
-                #     for metric in metrics:
-                #         score = metrics[metric](y_test, y_pred)
-                #         result[metric].append(score)  # append score for each metric
-                # endregion
-
-                cv_result = cross_validate(clf, _X[:, k_best_features], _y if clf_name !='KNN' else _y.ravel(), cv_method, metrics)
+                # try:
+                cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
                 avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
+                # except:
+                #     cv_result={'fit-time':[math.nan]}
+
                 for metric in metrics.keys():
                     record = {
                         'Dataset Name': dataset,
@@ -190,11 +172,12 @@ for dataset in datasets:
                         'Fold': '',  # on all cv methods there is fold?
                         'Measure Type': metric,
                         'Measure Value': mean(cv_result[metric]),
-                        'List of Selected Features Names': tuple([features_names[i] for i in k_best_features]),
-                        'Selected Features scores': tuple([score[i] for i in k_best_features]),
+                        'List of Selected Features Names': ','.join([str(features_names[i]) for i in k_best_features]),
+                        'Selected Features scores': ','.join([str(score[i]) for i in k_best_features]),
                         'Feature Selection time': feature_selection_time,
                         'Fit time': avg_fit_time,
                         'Inference time per record': avg_inference_time,
                     }
-                    results_table.append(record,ignore_index=True)
+                    record = pd.DataFrame([record])
+                    results_table = pd.concat([results_table,record])
     results_table.to_csv('results.csv')

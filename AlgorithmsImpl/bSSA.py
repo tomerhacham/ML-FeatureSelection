@@ -1,26 +1,27 @@
-from sklearnex import patch_sklearn
-patch_sklearn()
+# from sklearnex import patch_sklearn
+# patch_sklearn()
 
 from scipy.spatial.distance import hamming
 from AlgorithmsImpl.Utilities import WithScores
 
 from random import random
 import numpy as np
+import pandas as pd
 import math
 
 from numpy.random._generator import default_rng
 from sklearn.decomposition import PCA, FastICA
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
 
-
+data_transformation = Pipeline([('PCA', PCA()),
+                                ('FastICA', FastICA())])
 def dataTransformation(X):
     pca,ica=PCA(), FastICA()
     _X = pca.fit_transform(X)
     _X = ica.fit_transform(X)
-    asd=ica.inverse_transform(_X)
-    asd=pca.inverse_transform(asd)
-    return _X
+    return _X, pca
 
 
 def generateUpdateLeaderFunction(Ymax, Ymin):
@@ -48,9 +49,23 @@ def generateFitnessFucntion(X, y):
 
     return calculateFitness
 
+
+def search_features(data_transformation, columns_name):
+    for column_name in columns_name:
+        a = data_transformation.get_feature_names_out(input_features=[column_name])
+        print(a)
+    pass
+
+
 @WithScores
-def bSSA(__X, y, binarization_threshold=0.6, population_size=100, maxIter=70,verbose=0):
-    X = dataTransformation(__X)  # data transformation
+def bSSA(X, y, binarization_threshold=0.6, population_size=100, maxIter=70,verbose=0):
+    # __X = pd.DataFrame(data=__X, columns=columns_name)
+    # X , pca = dataTransformation(__X)  # data transformation
+    # #X = data_transformation.fit_transform(__X)
+    # a = pca.components_
+    #aaa = pca.get_feature_names_out(input_features=columns_name)
+    #selected_features = search_features(data_transformation,columns_name)
+
     calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
     salps = [np.where(default_rng().random(X.shape[1]) > binarization_threshold, 1, 0) for _ in
              range(population_size)]  # creates initial population
@@ -75,7 +90,7 @@ def bSSA(__X, y, binarization_threshold=0.6, population_size=100, maxIter=70,ver
 
 @WithScores
 def bSSA__New(X, y, population_size=100, maxIter=70,verbose=0):
-    X = dataTransformation(X)  # data transformation
+    # X = dataTransformation(X)  # data transformation
     calculateFitness = generateFitnessFucntion(X, y)  # generate lazy score function
     salps = [np.where(default_rng().random(X.shape[1]) > random(), 1, 0) for _ in
              range(population_size)]  # creates initial population

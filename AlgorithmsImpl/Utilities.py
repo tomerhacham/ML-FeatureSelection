@@ -1,8 +1,9 @@
 import numpy as np
-from sklearnex import patch_sklearn
-patch_sklearn()
+# from sklearnex import patch_sklearn
+# patch_sklearn()
 from sklearn.feature_selection import f_classif
 from functools import wraps
+from ReliefF import ReliefF
 
 
 def WithScores(func):
@@ -15,3 +16,8 @@ def WithScores(func):
         return amplified_scores
 
     return score_imputer
+
+def ReliefFFitter(X,y):
+    reliefF = ReliefF() if X.shape[0] > 100 else ReliefF(n_neighbors=X.shape[0] // 5)
+    reliefF.fit(X, y)
+    return reliefF
