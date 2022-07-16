@@ -3,7 +3,6 @@ import time
 
 # from sklearnex import patch_sklearn
 # patch_sklearn()
-from ReliefF import ReliefF
 from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, precision_recall_curve, make_scorer, \
     average_precision_score
 from AlgorithmsImpl.FAST import FAST
@@ -18,13 +17,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.model_selection import KFold, LeaveOneOut, LeavePOut, cross_validate
+from sklearn.model_selection import KFold, LeaveOneOut, LeavePOut
 from skfeature.function.information_theoretical_based.MRMR import mrmr
 import numpy as np
 import pandas as pd
 from statistics import mean
-
-from sklearn.metrics import get_scorer
+from Data.DataLoader import load_data
 
 # NB, SVM, LogisticsRegression, RandomForest, k-nearest neighbors (K-NN
 # classifiers list hold tuples which contains the classifier name and a function to generate such one
@@ -50,7 +48,7 @@ fs_methods = [  ('bSSA', lambda X, y,: bSSA(X, y)),
 preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('varianceThreshold', VarianceThreshold()),
                                 ('powerTransformer', PowerTransformer())])
-datasets = ['as']
+datasets = ['ALL']
 
 def get_CV_generator(X):
     '''Return the CV method according  the number of samples of X'''
@@ -143,7 +141,7 @@ def get_new_record_to_results():
 
 results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
 for dataset in datasets:
-    X, y = load_dataset()
+    X, y = load_data(dataset)
     _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
     features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
     for fs_method_name, fs_method in fs_methods:
