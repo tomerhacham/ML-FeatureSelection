@@ -164,7 +164,6 @@ for dataset in datasets:
                     clf = generate_func()
                     cv_method_name, cv_method = get_CV_generator(_X)
                     n_classes = y.nunique(dropna=False)
-                    print(f'n_classes:{n_classes}')
                     metrics = get_metrics(n_classes)
                     # try:
                     cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
@@ -181,7 +180,7 @@ for dataset in datasets:
                             'Learning Algorithm': clf_name,
                             'Number of features selected (K)': K,
                             'CV Method': cv_method_name,
-                            'Fold': '',  # on all cv methods there is fold?
+                            'Fold': cv_method.get_n_splits(),  # on all cv methods there is fold?
                             'Measure Type': metric,
                             'Measure Value': mean(cv_result[metric]),
                             'List of Selected Features Names': ','.join(
