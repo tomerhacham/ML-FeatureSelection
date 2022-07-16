@@ -26,33 +26,34 @@ from Data.DataLoader import load_data
 
 # NB, SVM, LogisticsRegression, RandomForest, k-nearest neighbors (K-NN
 # classifiers list hold tuples which contains the classifier name and a function to generate such one
-classifiers = [   ('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
-     ('SVM', lambda: SVC(probability=True)),
-     ('LogisticsRegression', lambda: LogisticRegression()),
-     ('RandomForest', lambda: RandomForestClassifier()),
-    ('K-NN', lambda: KNeighborsClassifier()),
-]
+classifiers = [('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb', MultinomialNB())])),
+               ('SVM', lambda: SVC(probability=True)),
+               ('LogisticsRegression', lambda: LogisticRegression()),
+               ('RandomForest', lambda: RandomForestClassifier()),
+               ('K-NN', lambda: KNeighborsClassifier()),
+               ]
 # mRMR, f_classIf, RFE, ReliefF
 # fs_methods list holds tuples of the feature selection method name and a function which generalize the process
-fs_methods = [  ('bSSA', lambda X, y,: bSSA(X, y)),
-                ('bSSA_New', lambda X, y: bSSA__New(X, y)),
-                ('FAST', lambda X, y: FAST(X, y)),
-                ('mRMR', lambda X, y: mrmr(X, y)),
-                ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
-                ('RFE', lambda X, y: RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
-                ( 'ReliefF',
-                 lambda X, y: ReliefFFitter(X,y).feature_scores)
-            ]
+fs_methods = [('bSSA', lambda X, y,: bSSA(X, y)),
+              ('bSSA_New', lambda X, y: bSSA__New(X, y)),
+              ('FAST', lambda X, y: FAST(X, y)),
+              ('mRMR', lambda X, y: mrmr(X, y)),
+              ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
+              ('RFE', lambda X, y: RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
+              ('ReliefF',
+               lambda X, y: ReliefFFitter(X, y).feature_scores)
+              ]
 
 # Define the preprocess pipeline
 preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('varianceThreshold', VarianceThreshold()),
                                 ('powerTransformer', PowerTransformer())])
-datasets = ['ALL','ayeastCC','bcellViper','bladderbatch',
-            'CLL','Breast','CNS','Leukemia_4c','Lymphoma',
-            'SRBCT','ALLAML','BASEHOCK','CLL-SUB-111',
-            'colone','GLIOMA','GDS4824','journal.pone.0246039.s002',
-            'NCI60_Affy','NCI60_Ross','pone.0246039.s001']
+datasets = ['ALL', 'ayeastCC', 'bcellViper', 'bladderbatch',
+            'CLL', 'Breast', 'CNS', 'Leukemia_4c', 'Lymphoma',
+            'SRBCT', 'ALLAML', 'BASEHOCK', 'CLL-SUB-111',
+            'colone', 'GLIOMA', 'GDS4824', 'journal.pone.0246039.s002',
+            'NCI60_Affy', 'NCI60_Ross', 'pone.0246039.s001']
+
 
 def get_CV_generator(X):
     '''Return the CV method according  the number of samples of X'''
@@ -145,49 +146,54 @@ def get_new_record_to_results():
 
 results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
 for dataset in datasets:
-    X, y = load_data(dataset)
-    _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
-    features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
-    for fs_method_name, fs_method in fs_methods:
-        selectKBest = SelectKBest(score_func=fs_method, k=100)
-        start_time = time.time()  # start timer
-        selectKBest.fit(_X, _y)
-        feature_selection_time = time.time() - start_time  # measure feature selection time
-        score = selectKBest.scores_
-        for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
-        # for K in list([1]):
-            k_best_features = np.argpartition(score, -K)[-K:]
-            for clf_name, generate_func in classifiers:
-                print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')
-                clf = generate_func()
-                cv_method_name, cv_method = get_CV_generator(_X)
-                n_classes = y.nunique(dropna=False)
-                print(f'n_classes:{n_classes}')
-                metrics = get_metrics(n_classes)
-                # try:
-                cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
-                avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
-                # except:
-                #     cv_result={'fit-time':[math.nan]}
+    try:
+        X, y = load_data(dataset)
+        _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
+        features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
+        for fs_method_name, fs_method in fs_methods:
+            selectKBest = SelectKBest(score_func=fs_method, k=100)
+            start_time = time.time()  # start timer
+            selectKBest.fit(_X, _y)
+            feature_selection_time = time.time() - start_time  # measure feature selection time
+            score = selectKBest.scores_
+            for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
+                # for K in list([1]):
+                k_best_features = np.argpartition(score, -K)[-K:]
+                for clf_name, generate_func in classifiers:
+                    print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')
+                    clf = generate_func()
+                    cv_method_name, cv_method = get_CV_generator(_X)
+                    n_classes = y.nunique(dropna=False)
+                    print(f'n_classes:{n_classes}')
+                    metrics = get_metrics(n_classes)
+                    # try:
+                    cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
+                    avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
+                    # except:
+                    #     cv_result={'fit-time':[math.nan]}
 
-                for metric in metrics.keys():
-                    record = {
-                        'Dataset Name': dataset,
-                        'Number of samples': X.shape[0],
-                        'Original Number of features': X.shape[1],
-                        'Filtering Algorithm': fs_method_name,
-                        'Learning Algorithm': clf_name,
-                        'Number of features selected (K)': K,
-                        'CV Method': cv_method_name,
-                        'Fold': '',  # on all cv methods there is fold?
-                        'Measure Type': metric,
-                        'Measure Value': mean(cv_result[metric]),
-                        'List of Selected Features Names': ','.join([str(features_names[i]) for i in k_best_features]),
-                        'Selected Features scores': ','.join([str(score[i]) for i in k_best_features]),
-                        'Feature Selection time': feature_selection_time,
-                        'Fit time': avg_fit_time,
-                        'Inference time per record': avg_inference_time,
-                    }
-                    record = pd.DataFrame([record])
-                    results_table = pd.concat([results_table,record])
-    results_table.to_csv('results.csv')
+                    for metric in metrics.keys():
+                        record = {
+                            'Dataset Name': dataset,
+                            'Number of samples': X.shape[0],
+                            'Original Number of features': X.shape[1],
+                            'Filtering Algorithm': fs_method_name,
+                            'Learning Algorithm': clf_name,
+                            'Number of features selected (K)': K,
+                            'CV Method': cv_method_name,
+                            'Fold': '',  # on all cv methods there is fold?
+                            'Measure Type': metric,
+                            'Measure Value': mean(cv_result[metric]),
+                            'List of Selected Features Names': ','.join(
+                                [str(features_names[i]) for i in k_best_features]),
+                            'Selected Features scores': ','.join([str(score[i]) for i in k_best_features]),
+                            'Feature Selection time': feature_selection_time,
+                            'Fit time': avg_fit_time,
+                            'Inference time per record': avg_inference_time,
+                        }
+                        record = pd.DataFrame([record])
+                        results_table = pd.concat([results_table, record])
+        results_table.to_csv('results.csv')
+    except:
+        print(f'problem with dataset:{dataset}')
+        continue
