@@ -2,6 +2,7 @@ import math
 import time
 
 from sklearnex import patch_sklearn
+
 patch_sklearn()
 from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, average_precision_score
 from AlgorithmsImpl.FAST import FAST
@@ -38,7 +39,7 @@ fs_methods = [('bSSA', lambda X, y,: bSSA(X, y)),
               ('FAST', lambda X, y: FAST(X, y)),
               ('mRMR', lambda X, y: mrmr(X, y)),
               ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
-              ('RFE', lambda X, y: RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
+              # ('RFE', lambda X, y: RFE(estimator=SVC(kernel="linear")).fit(X, y).ranking_),
               ('ReliefF',
                lambda X, y: ReliefFFitter(X, y).feature_scores)
               ]
@@ -47,11 +48,12 @@ fs_methods = [('bSSA', lambda X, y,: bSSA(X, y)),
 preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('varianceThreshold', VarianceThreshold()),
                                 ('powerTransformer', PowerTransformer())])
-datasets = ['ALL', 'ayeastCC', 'bcellViper', 'bladderbatch',
-            'CLL', 'Breast', 'CNS', 'Leukemia_4c', 'Lymphoma',
-            'SRBCT', 'ALLAML', 'BASEHOCK', 'CLL-SUB-111',
-            'colone', 'GLIOMA', 'GDS4824', 'journal.pone.0246039.s002',
-            'NCI60_Affy', 'NCI60_Ross', 'pone.0246039.s001']
+datasets = [  # 'ALL', 'ayeastCC',
+    'bcellViper', 'bladderbatch',
+    'CLL', 'Breast', 'CNS', 'Leukemia_4c', 'Lymphoma',
+    'SRBCT', 'ALLAML', 'BASEHOCK', 'CLL-SUB-111',
+    'colone', 'GLIOMA', 'GDS4824', 'journal.pone.0246039.s002',
+    'NCI60_Affy', 'NCI60_Ross', 'pone.0246039.s001']
 
 
 def get_CV_generator(X):
@@ -80,7 +82,8 @@ def get_metrics(n_classes):
                'MCC': lambda y_true, y_score: matthews_corrcoef(y_true, np.argmax(y_score, axis=1)),
                'PR-AUC': lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true], y_score)}
     if n_classes > 2:
-        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(np.identity(n_classes)[y_true], y_score, multi_class='ovr', average='macro')
+        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(np.identity(n_classes)[y_true], y_score,
+                                                               multi_class='ovr', average='macro')
     else:
         metrics['AUC'] = lambda y_true, y_score: roc_auc_score(np.identity(n_classes)[y_true], y_score)
     return metrics
@@ -95,6 +98,17 @@ def split_test_train(train_indexes, test_indexes, X, y):
     return X_train, y_train, X_test, y_test
 
 
+def broadcast_size(y_pred, n_classes):
+    for i in range(len(y_pred)):
+        arr = y_pred[i]
+        if arr.shape[1] < n_classes:
+            new_arr = np.zeros((arr.shape[0], n_classes))
+            for j in range(arr.shape[0]):
+                new_arr[j, :arr.shape[1]] += arr[j]
+            y_pred[i] = new_arr
+    return y_pred
+
+
 def cross_validate(clf, X, y, cv_method, metrics):
     '''Performs cross validation on the dataset according a given cross validation method.
         The function returns dictionary with the requested result which should be derived from the metrics
@@ -102,7 +116,7 @@ def cross_validate(clf, X, y, cv_method, metrics):
     result = {'fit-time': [],
               'inference-time': []
               }
-    y_test_total,y_pred_total = [],[]
+    y_test_total, y_pred_total = [], []
     for train, test in cv_method.split(X, y):
         X_train, y_train, X_test, y_test = split_test_train(train, test, X, y)
         start_time = time.time()  # start timer
@@ -116,11 +130,13 @@ def cross_validate(clf, X, y, cv_method, metrics):
         y_pred_total.append(y_pred)
         y_test_total.append(y_test)
 
+    n_classes = pd.Series(y).nunique()
+    y_pred_total = broadcast_size(y_pred_total, n_classes)
     y_test = np.concatenate(y_test_total)
     y_pred = np.concatenate(y_pred_total)
     for metric in metrics:
         score = metrics[metric](y_test, y_pred)
-        result[metric]=score  # append score for each metric
+        result[metric] = score  # append score for each metric
 
     return result
 
@@ -179,7 +195,7 @@ for dataset in datasets:
                         'Learning Algorithm': clf_name,
                         'Number of features selected (K)': K,
                         'CV Method': cv_method_name,
-                        'Fold': cv_method.get_n_splits(_X,_y),
+                        'Fold': cv_method.get_n_splits(_X, _y),
                         'Measure Type': metric,
                         'Measure Value': cv_result[metric],
                         'List of Selected Features Names': ','.join(
@@ -195,4 +211,3 @@ for dataset in datasets:
     #     results_table.to_csv(f'results.csv')
     # results_table.to_csv(f'{dataset}-results.csv')
     # results_table.to_csv(f'results.csv')
-
