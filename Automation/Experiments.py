@@ -1,10 +1,9 @@
 import math
 import time
 
-# from sklearnex import patch_sklearn
-# patch_sklearn()
-from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, precision_recall_curve, make_scorer, \
-    average_precision_score
+from sklearnex import patch_sklearn
+patch_sklearn()
+from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, average_precision_score
 from AlgorithmsImpl.FAST import FAST
 from AlgorithmsImpl.Utilities import ReliefFFitter
 from AlgorithmsImpl.bSSA import bSSA, bSSA__New
@@ -147,8 +146,8 @@ def get_new_record_to_results():
     }
 
 
-results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
 for dataset in datasets:
+    results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
     X, y = load_data(dataset)
     _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
     features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
@@ -180,7 +179,7 @@ for dataset in datasets:
                         'Learning Algorithm': clf_name,
                         'Number of features selected (K)': K,
                         'CV Method': cv_method_name,
-                        'Fold': cv_method.get_n_splits(),
+                        'Fold': cv_method.get_n_splits(_X,_y),
                         'Measure Type': metric,
                         'Measure Value': cv_result[metric],
                         'List of Selected Features Names': ','.join(
@@ -192,6 +191,8 @@ for dataset in datasets:
                     }
                     record = pd.DataFrame([record])
                     results_table = pd.concat([results_table, record])
-    results_table.to_csv(f'{dataset}-results.csv')
-    results_table.to_csv(f'results.csv')
+        results_table.to_csv(f'{dataset}-results.csv')
+    #     results_table.to_csv(f'results.csv')
+    # results_table.to_csv(f'{dataset}-results.csv')
+    # results_table.to_csv(f'results.csv')
 
