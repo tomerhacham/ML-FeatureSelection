@@ -101,12 +101,9 @@ def cross_validate(clf, X, y, cv_method, metrics):
         The function returns dictionary with the requested result which should be derived from the metrics
     '''
     result = {'fit-time': [],
-              'inference-time': [],
-              'ACC': [],
-              'AUC': [],
-              'MCC': [],
-              'PR-AUC': [],
+              'inference-time': []
               }
+    y_test_total,y_pred_total = [],[]
     for train, test in cv_method.split(X, y):
         X_train, y_train, X_test, y_test = split_test_train(train, test, X, y)
         start_time = time.time()  # start timer
@@ -116,10 +113,15 @@ def cross_validate(clf, X, y, cv_method, metrics):
         y_pred = clf.predict_proba(X_test)
         inference_time = (time.time() - start_time - fit_time) / X_test.shape[0]  # measure inference time
         result['inference-time'].append(inference_time)
-        y_test =y_test.astype(int)
-        for metric in metrics:
-            score = metrics[metric](y_test, y_pred)
-            result[metric].append(score)  # append score for each metric
+        y_test = y_test.astype(int)
+        y_pred_total.append(y_pred)
+        y_test_total.append(y_test)
+
+    y_test = np.concatenate(y_test_total)
+    y_pred = np.concatenate(y_pred_total)
+    for metric in metrics:
+        score = metrics[metric](y_test, y_pred)
+        result[metric]=score  # append score for each metric
 
     return result
 
@@ -168,8 +170,6 @@ for dataset in datasets:
                 # try:
                 cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
                 avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
-                # except:
-                #     cv_result={'fit-time':[math.nan]}
 
                 for metric in metrics.keys():
                     record = {
@@ -180,9 +180,9 @@ for dataset in datasets:
                         'Learning Algorithm': clf_name,
                         'Number of features selected (K)': K,
                         'CV Method': cv_method_name,
-                        'Fold': cv_method.get_n_splits(),  # on all cv methods there is fold?
+                        'Fold': cv_method.get_n_splits(),
                         'Measure Type': metric,
-                        'Measure Value': mean(cv_result[metric]),
+                        'Measure Value': cv_result[metric],
                         'List of Selected Features Names': ','.join(
                             [str(features_names[i]) for i in k_best_features]),
                         'Selected Features scores': ','.join([str(score[i]) for i in k_best_features]),
