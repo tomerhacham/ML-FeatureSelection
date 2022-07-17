@@ -117,7 +117,7 @@ def cross_validate(clf, X, y, cv_method, metrics):
         inference_time = (time.time() - start_time - fit_time) / X_test.shape[0]  # measure inference time
         result['inference-time'].append(inference_time)
         for metric in metrics:
-            score = metrics[metric](y_test, y_pred)
+            score = metrics[metric](y_test.astype(int), y_pred)
             result[metric].append(score)  # append score for each metric
 
     return result
@@ -146,53 +146,51 @@ def get_new_record_to_results():
 
 results_table = pd.DataFrame(columns=[key for key in get_new_record_to_results()])
 for dataset in datasets:
-    try:
-        X, y = load_data(dataset)
-        _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
-        features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
-        for fs_method_name, fs_method in fs_methods:
-            selectKBest = SelectKBest(score_func=fs_method, k=100)
-            start_time = time.time()  # start timer
-            selectKBest.fit(_X, _y)
-            feature_selection_time = time.time() - start_time  # measure feature selection time
-            score = selectKBest.scores_
-            for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
-                # for K in list([1]):
-                k_best_features = np.argpartition(score, -K)[-K:]
-                for clf_name, generate_func in classifiers:
-                    print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')
-                    clf = generate_func()
-                    cv_method_name, cv_method = get_CV_generator(_X)
-                    n_classes = y.nunique(dropna=False)
-                    metrics = get_metrics(n_classes)
-                    # try:
-                    cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
-                    avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
-                    # except:
-                    #     cv_result={'fit-time':[math.nan]}
+    X, y = load_data(dataset)
+    _X, _y = preprocess_pipeline.fit_transform(X, y), y.to_numpy()
+    features_names = list(preprocess_pipeline.get_feature_names_out(input_features=list(X.columns)))
+    for fs_method_name, fs_method in fs_methods:
+        selectKBest = SelectKBest(score_func=fs_method, k=100)
+        start_time = time.time()  # start timer
+        selectKBest.fit(_X, _y)
+        feature_selection_time = time.time() - start_time  # measure feature selection time
+        score = selectKBest.scores_
+        for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
+            # for K in list([1]):
+            k_best_features = np.argpartition(score, -K)[-K:]
+            for clf_name, generate_func in classifiers:
+                print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')
+                clf = generate_func()
+                cv_method_name, cv_method = get_CV_generator(_X)
+                n_classes = y.nunique(dropna=False)
+                metrics = get_metrics(n_classes)
+                # try:
+                cv_result = cross_validate(clf, _X[:, k_best_features], _y, cv_method, metrics)
+                avg_fit_time, avg_inference_time = mean(cv_result['fit-time']), mean(cv_result['inference-time'])
+                # except:
+                #     cv_result={'fit-time':[math.nan]}
 
-                    for metric in metrics.keys():
-                        record = {
-                            'Dataset Name': dataset,
-                            'Number of samples': X.shape[0],
-                            'Original Number of features': X.shape[1],
-                            'Filtering Algorithm': fs_method_name,
-                            'Learning Algorithm': clf_name,
-                            'Number of features selected (K)': K,
-                            'CV Method': cv_method_name,
-                            'Fold': cv_method.get_n_splits(),  # on all cv methods there is fold?
-                            'Measure Type': metric,
-                            'Measure Value': mean(cv_result[metric]),
-                            'List of Selected Features Names': ','.join(
-                                [str(features_names[i]) for i in k_best_features]),
-                            'Selected Features scores': ','.join([str(score[i]) for i in k_best_features]),
-                            'Feature Selection time': feature_selection_time,
-                            'Fit time': avg_fit_time,
-                            'Inference time per record': avg_inference_time,
-                        }
-                        record = pd.DataFrame([record])
-                        results_table = pd.concat([results_table, record])
-        results_table.to_csv('results.csv')
-    except:
-        print(f'problem with dataset:{dataset}')
-        continue
+                for metric in metrics.keys():
+                    record = {
+                        'Dataset Name': dataset,
+                        'Number of samples': X.shape[0],
+                        'Original Number of features': X.shape[1],
+                        'Filtering Algorithm': fs_method_name,
+                        'Learning Algorithm': clf_name,
+                        'Number of features selected (K)': K,
+                        'CV Method': cv_method_name,
+                        'Fold': cv_method.get_n_splits(),  # on all cv methods there is fold?
+                        'Measure Type': metric,
+                        'Measure Value': mean(cv_result[metric]),
+                        'List of Selected Features Names': ','.join(
+                            [str(features_names[i]) for i in k_best_features]),
+                        'Selected Features scores': ','.join([str(score[i]) for i in k_best_features]),
+                        'Feature Selection time': feature_selection_time,
+                        'Fit time': avg_fit_time,
+                        'Inference time per record': avg_inference_time,
+                    }
+                    record = pd.DataFrame([record])
+                    results_table = pd.concat([results_table, record])
+    results_table.to_csv(f'{dataset}-results.csv')
+    results_table.to_csv(f'results.csv')
+
