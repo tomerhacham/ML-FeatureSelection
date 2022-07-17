@@ -81,9 +81,9 @@ def get_metrics(n_classes):
                'MCC': lambda y_true, y_score: matthews_corrcoef(y_true, np.argmax(y_score, axis=1)),
                'PR-AUC': lambda y_true, y_score: average_precision_score(np.identity(n_classes)[y_true], y_score)}
     if n_classes > 2:
-        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(y_true, y_score, multi_class='ovr', average='macro')
+        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(np.identity(n_classes)[y_true], y_score, multi_class='ovr', average='macro')
     else:
-        metrics['AUC'] = roc_auc_score
+        metrics['AUC'] = lambda y_true, y_score: roc_auc_score(np.identity(n_classes)[y_true], y_score)
     return metrics
 
 
@@ -116,8 +116,9 @@ def cross_validate(clf, X, y, cv_method, metrics):
         y_pred = clf.predict_proba(X_test)
         inference_time = (time.time() - start_time - fit_time) / X_test.shape[0]  # measure inference time
         result['inference-time'].append(inference_time)
+        y_test =y_test.astype(int)
         for metric in metrics:
-            score = metrics[metric](y_test.astype(int), y_pred)
+            score = metrics[metric](y_test, y_pred)
             result[metric].append(score)  # append score for each metric
 
     return result
