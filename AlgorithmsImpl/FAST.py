@@ -94,8 +94,11 @@ def FAST(X, y, t_relevance_threshold=None):
         t_relevance = su_calculation(X[:,f], y)
         if t_relevance > t_relevance_threshold:
             S.add(f)
-        else:
-            print(f'{f}:{t_relevance}')
+        # else:
+        #     print(f'{f}:{t_relevance}')
+
+    if len(S) == 0:
+        return [0 for f in features]
 
     # ==== Part 2: Minimum Spanning Tree Construction ====
     nodes_map = [node for node in S]

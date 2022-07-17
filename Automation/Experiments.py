@@ -34,8 +34,8 @@ classifiers = [('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb',
                ]
 # mRMR, f_classIf, RFE, ReliefF
 # fs_methods list holds tuples of the feature selection method name and a function which generalize the process
-fs_methods = [('bSSA', lambda X, y,: bSSA(X, y)),
-              ('bSSA_New', lambda X, y: bSSA__New(X, y)),
+fs_methods = [#('bSSA', lambda X, y,: bSSA(X, y)),
+              #('bSSA_New', lambda X, y: bSSA__New(X, y)),
               ('FAST', lambda X, y: FAST(X, y)),
               ('mRMR', lambda X, y: mrmr(X, y)),
               ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
