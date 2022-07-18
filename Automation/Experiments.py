@@ -50,9 +50,9 @@ preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('powerTransformer', PowerTransformer())])
 datasets = [  # 'ALL', 'ayeastCC',
     #'bcellViper',
-    'bladderbatch',
-    'CLL', 'Breast', 'CNS', 'Leukemia_4c', 'Lymphoma',
-    'SRBCT',
+    #'bladderbatch',
+    #'CLL', 'Breast', 'CNS', 'Leukemia_4c', 'Lymphoma',
+    #'SRBCT',
     'ALLAML', 'BASEHOCK', 'CLL-SUB-111',
     'colone', 'GLIOMA', 'GDS4824', 'journal.pone.0246039.s002',
     'NCI60_Affy', 'NCI60_Ross', 'pone.0246039.s001']

@@ -53,7 +53,9 @@ def load_bioconductors_files(filename):
 
 def load_skfeatures_files(filename):
     data = sio.loadmat(filename)
-    X, y = pd.DataFrame(data['X'], columns=[f'X{i}' for i in range(1, data['X'].shape[1] + 1)]), data['Y']
+    X = pd.DataFrame(data['X'], columns=[f'X{i}' for i in range(1, data['X'].shape[1] + 1)])
+    y = data['Y'].flatten()
+    y = pd.Series(y)
     y = scale_y_values(y)
     return X, y
 
