@@ -69,7 +69,7 @@ def createTrees(edges):
 
 #A Fast Clustering Based Feature Subset Selection
 @WithScores
-def FAST(X, y, t_relevance_threshold=None):
+def FAST(X, y, t_relevance_threshold=0.4):
     '''
     A Fast Clustering Based Feature Subset Selection
     X : {array-like, sparse matrix} of shape (n_samples, n_features)
@@ -94,8 +94,8 @@ def FAST(X, y, t_relevance_threshold=None):
         t_relevance = su_calculation(X[:,f], y)
         if t_relevance > t_relevance_threshold:
             S.add(f)
-        # else:
-        #     print(f'{f}:{t_relevance}')
+        else:
+            print(f'{f}:{t_relevance}')
 
     if len(S) == 0:
         return [0 for f in features]

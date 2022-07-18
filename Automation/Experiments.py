@@ -1,9 +1,9 @@
 import math
 import time
 
-from sklearnex import patch_sklearn
+#from sklearnex import patch_sklearn
 
-patch_sklearn()
+#patch_sklearn()
 from sklearn.metrics import accuracy_score, matthews_corrcoef, roc_auc_score, average_precision_score
 from AlgorithmsImpl.FAST import FAST
 from AlgorithmsImpl.Utilities import ReliefFFitter
@@ -34,8 +34,8 @@ classifiers = [('NB', lambda: Pipeline([('minMaxScaler', MinMaxScaler()), ('nb',
                ]
 # mRMR, f_classIf, RFE, ReliefF
 # fs_methods list holds tuples of the feature selection method name and a function which generalize the process
-fs_methods = [#('bSSA', lambda X, y,: bSSA(X, y)),
-              #('bSSA_New', lambda X, y: bSSA__New(X, y)),
+fs_methods = [('bSSA', lambda X, y,: bSSA(X, y)),
+              ('bSSA_New', lambda X, y: bSSA__New(X, y)),
               ('FAST', lambda X, y: FAST(X, y)),
               ('mRMR', lambda X, y: mrmr(X, y)),
               ('SelectFdr', lambda X, y: SelectFdr(alpha=0.1).fit(X, y).scores_),
@@ -49,9 +49,11 @@ preprocess_pipeline = Pipeline([('simpleImputer', SimpleImputer()),
                                 ('varianceThreshold', VarianceThreshold()),
                                 ('powerTransformer', PowerTransformer())])
 datasets = [  # 'ALL', 'ayeastCC',
-    'bcellViper', 'bladderbatch',
+    #'bcellViper',
+    'bladderbatch',
     'CLL', 'Breast', 'CNS', 'Leukemia_4c', 'Lymphoma',
-    'SRBCT', 'ALLAML', 'BASEHOCK', 'CLL-SUB-111',
+    'SRBCT',
+    'ALLAML', 'BASEHOCK', 'CLL-SUB-111',
     'colone', 'GLIOMA', 'GDS4824', 'journal.pone.0246039.s002',
     'NCI60_Affy', 'NCI60_Ross', 'pone.0246039.s001']
 
@@ -174,10 +176,10 @@ for dataset in datasets:
         feature_selection_time = time.time() - start_time  # measure feature selection time
         score = selectKBest.scores_
         for K in list([100, 50, 30, 25, 20, 15, 10, 5, 4, 3, 2, 1]):
-            # for K in list([1]):
+        # for K in list([1]):
             k_best_features = np.argpartition(score, -K)[-K:]
             for clf_name, generate_func in classifiers:
-                print(f'classifier:{clf_name}, FS:{fs_method_name}, k:{K}')
+                print(f'FS:{fs_method_name}, k:{K}, classifier:{clf_name}')
                 clf = generate_func()
                 cv_method_name, cv_method = get_CV_generator(_X)
                 n_classes = y.nunique(dropna=False)
